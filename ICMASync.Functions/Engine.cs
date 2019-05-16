@@ -6,35 +6,72 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Linq;
 using System.Net.Http;
-using Microsoft.EntityFrameworkCore;
-using ICMASync.Data.Context;
+using ICMASync.Data;
 
 namespace ICMASync.Functions
 {
+    /// <summary>
+    /// When you have a lot of parameters it's always better to wrap them in params class
+    /// </summary>
+    public class EngineSyncParams
+    {
+        public string NetforumsUsername { get; }
+        public string NetforumsPassword { get; }
+        public DateTime LastSyncDate { get; }
+        public string HivebriteBaseUrl { get; }
+        public string HivebriteAdminEmail { get; }
+        public string HivebritePassword { get; }
+        public string HivebriteClientId { get; }
+        public string HivebriteClientSecret { get; }
+        public int HivebriteSubNetworkId { get; }
+
+        public EngineSyncParams(string netforums_Username,
+            string netforums_password, DateTime lastSyncDate, string hivebrite_BaseUrl, string hivebrite_AdminEmail,
+            string hivebrite_Password, string hivebrite_ClientId, string hivebrite_ClientSecret,
+            int hivebrite_SubNetworkId)
+        {
+            NetforumsUsername = netforums_Username;
+            NetforumsPassword = netforums_password;
+            LastSyncDate = lastSyncDate;
+            HivebriteBaseUrl = hivebrite_BaseUrl;
+            HivebriteAdminEmail = hivebrite_AdminEmail;
+            HivebritePassword = hivebrite_Password;
+            HivebriteClientId = hivebrite_ClientId;
+            HivebriteClientSecret = hivebrite_ClientSecret;
+            HivebriteSubNetworkId = hivebrite_SubNetworkId;
+        }
+    }
+
     public class Engine
     {
-        public static async Task Sync(string netforums_Username, string netforums_password, DateTime lastSyncDate, string hivebrite_BaseUrl, string hivebrite_AdminEmail, string hivebrite_Password, string hivebrite_ClientId, string hivebrite_ClientSecret, int hivebrite_SubNetworkId)
+        private readonly IBaseContextFactory _baseContextFactory;
+
+        public Engine(IBaseContextFactory baseContextFactory)
         {
-            
+            _baseContextFactory = baseContextFactory;
+        }
+
+        public async Task Sync(EngineSyncParams @params)
+        {
             // I need to be able to access the database here....
             // The database is in the ICMASync.Data project.
 
             // Please provide code to enable me to "Test" table in the "Trev" column
-
-
-
-
+            using (var baseContext = _baseContextFactory.Create())
+            {
+                //Use baseContext
+            }
 
             // Authenticate against NetForums
-            AuthenticateResponse authenticateResponse = await NetForums.Functions.Engine.AuthenticateClient(netforums_Username, netforums_password);
+            AuthenticateResponse authenticateResponse = await NetForums.Functions.Engine.AuthenticateClient(@params.NetforumsUsername, @params.NetforumsPassword);
 
             // Netforums: get a list of users from NetForums since last sync date by running netforums function SyncHBmembersdate
             // this will give me a list new members in NetForums  since the last sync
-            List<HBIndividual> netforums_Individuals = await NetForums.Functions.Engine.SyncHBmembersdate(authenticateResponse, lastSyncDate);
+            List<HBIndividual> netforums_Individuals = await NetForums.Functions.Engine.SyncHBmembersdate(authenticateResponse, @params.LastSyncDate);
 
             // Netforums: get a list of interests from NetForums updated since the last sync date
             // a distinct list of possible interests using SyncHBInterestsDate
-            List<Interest> netforums_Interests = await NetForums.Functions.Engine.SyncHBInterestsDate(authenticateResponse, lastSyncDate);
+            List<Interest> netforums_Interests = await NetForums.Functions.Engine.SyncHBInterestsDate(authenticateResponse, @params.LastSyncDate);
 
             // HB: get all the users that have had their records updated using Engine.ListUsers with a the sync date
             // this will include the intersts when full_profile is set to TRUE using Engine.ListUsers
@@ -47,10 +84,10 @@ namespace ICMASync.Functions
             // based on email address
 
             // get HB authentication information
-            HBAuthData hBAuthData = HiveBrite.Functions.Engine.Authorize(hivebrite_BaseUrl, hivebrite_AdminEmail, hivebrite_Password, hivebrite_ClientId, hivebrite_ClientSecret);
+            HBAuthData hBAuthData = HiveBrite.Functions.Engine.Authorize(@params.HivebriteBaseUrl, @params.HivebriteAdminEmail, @params.HivebritePassword, @params.HivebriteClientId, @params.HivebriteClientSecret);
 
             // get a list of users in HB
-            List<HBUser> hivebrite_users = HiveBrite.Functions.Engine.ListUsers(hBAuthData, hivebrite_BaseUrl, null, true);
+            List<HBUser> hivebrite_users = HiveBrite.Functions.Engine.ListUsers(hBAuthData, @params.HivebriteBaseUrl, null, true);
 
             foreach (HBIndividual individual in netforums_Individuals)
             {
@@ -71,7 +108,7 @@ namespace ICMASync.Functions
                             lastname = individual.ind_last_name,
                             sub_network_ids = new List<int>
                             {
-                                hivebrite_SubNetworkId
+                                @params.HivebriteSubNetworkId
                             },
                             external_id = individual.cst_recno,
                             email2 = individual.email2
@@ -79,7 +116,7 @@ namespace ICMASync.Functions
                     };
 
                     // create the user in HB
-                    CreateUpdateUserResponse userResponse = HiveBrite.Functions.Engine.CreateUpdateUser(hBAuthData, hivebrite_BaseUrl, userToCreate, HttpMethod.Post);
+                    CreateUpdateUserResponse userResponse = HiveBrite.Functions.Engine.CreateUpdateUser(hBAuthData, @params.HivebriteBaseUrl, userToCreate, HttpMethod.Post);
                 }
             }
 
