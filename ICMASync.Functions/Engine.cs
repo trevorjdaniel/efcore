@@ -60,6 +60,14 @@ namespace ICMASync.Functions
             using (var baseContext = _baseContextFactory.Create())
             {
                 //Use baseContext
+
+                // add a record to the test table
+                baseContext.Test.Add(new Data.Model.Test
+                {
+                    Trev = "this is some test text"
+                });
+
+                await baseContext.SaveChangesAsync();
             }
 
             // Authenticate against NetForums
