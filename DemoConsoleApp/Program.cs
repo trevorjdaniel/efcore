@@ -57,21 +57,6 @@ namespace DemoConsoleApp
         }
     }
 
-    class BaseContextFactory : IBaseContextFactory
-    {
-        private readonly DbContextOptions<BaseContext> _dbContextOptions;
-
-        public BaseContextFactory(DbContextOptions<BaseContext> dbContextOptions)
-        {
-            _dbContextOptions = dbContextOptions;
-        }
-
-        public BaseContext Create()
-        {
-            return new BaseContext(_dbContextOptions);
-        }
-    }
-
     class SomeUsefulClass 
     {
         private readonly IBaseContextFactory _baseContextFactory;
