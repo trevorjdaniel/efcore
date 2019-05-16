@@ -9,6 +9,7 @@ namespace ICMASync.Functions.Tests
         public void CallSync()
         {
             // I want to be able to trigger the Sync function from here...
+
         }
     }
 }
